@@ -1,0 +1,38 @@
+{
+  "level_name": "Level 2",
+  "player_start": [500, 400],
+  "platforms": [
+    [-10000, 450, 30000, 40]
+  ],
+  "windows": [
+    {
+      "position": [0, 0],
+      "size": [640, 480],
+      "locked": true,
+      "lens": null,
+      "settings_locked":false
+    },
+    {
+      "position": [640, 0],
+      "size": [640, 480],
+      "locked": false,
+      "lens": null,
+      "settings_locked":false
+    }
+  ],
+  "hints": [
+    {
+      "text": "Most windows you can change their lens.",
+      "position": [200, 50],
+      "duration": 30.0
+    },
+    {
+      "text": "Try cycling through available lenses using [</>] in the window manager.",
+      "position": [200, 90],
+      "duration": 30.0
+    }
+  ],
+  "goal": [620, 40],
+  "lenses": {"gravity_flip": 1},
+  "ORIGINAL_MAX_WINDOWS": 2
+}

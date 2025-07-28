@@ -1,0 +1,47 @@
+{
+  "level_name": "Level 1",
+  "player_start": [620, 400],
+  "platforms": [
+    [-10000, 450, 30000, 40]
+  ],
+  "windows": [
+    {
+      "position": [0, 0],
+      "size": [640, 480],
+      "locked": true,
+      "lens": null,
+      "settings_locked":true
+    },
+    {
+      "position": [640, 0],
+      "size": [640, 480],
+      "locked": false,
+      "lens": null
+    },
+    {
+      "position": [550, 200],
+      "size": [60, 50],
+      "locked": false,
+      "lens": null
+    },
+    {
+      "position": [610, 300],
+      "size": [60, 50],
+      "locked": true,
+      "lens": null
+    }
+  ],
+  "hints": [
+    {
+      "text": "Open the window manager with [E].",
+      "position": [200, 50],
+      "duration": 30.0
+    },
+    {
+      "text": "Then try locking a window, locked windows can't be moved or resized but act as platforms.",
+      "position": [200, 90],
+      "duration": 30.0
+    }
+  ],
+  "goal": [620, 40]
+}

@@ -1,0 +1,41 @@
+{
+  "level_name": "Level 2",
+  "player_start": [620, 400],
+  "platforms": [
+    [-10000, 450, 30000, 40]
+  ],
+  "windows": [
+    {
+      "position": [0, 0],
+      "size": [640, 480],
+      "locked": true,
+      "lens": null,
+      "settings_locked":true
+    },
+    {
+      "position": [640, 0],
+      "size": [640, 480],
+      "locked": false,
+      "lens": null
+    },
+    {
+      "position": [610, 300],
+      "size": [60, 50],
+      "locked": true,
+      "lens": null
+    }
+  ],
+  "hints": [
+    {
+      "text": "When in the window manager [E], press [N] to create a new window.",
+      "position": [100, 50],
+      "duration": 30.0
+    },
+    {
+      "text": "Be careful though you can only create a limited number of windows per level.",
+      "position": [100, 90],
+      "duration": 30.0
+    }
+  ],
+  "goal": [620, 40]
+}

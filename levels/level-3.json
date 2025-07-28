@@ -1,0 +1,38 @@
+{
+  "level_name": "Level 2",
+  "player_start": [500, 400],
+  "platforms": [
+    [-10000, 450, 30000, 40]
+  ],
+  "windows": [
+    {
+      "position": [0, 0],
+      "size": [640, 480],
+      "locked": true,
+      "lens": null,
+      "settings_locked":true
+    },
+    {
+      "position": [640, 0],
+      "size": [640, 480],
+      "locked": false,
+      "lens": "gravity_flip",
+      "settings_locked":true
+    }
+  ],
+  "hints": [
+    {
+      "text": "Some windows can have special effects dictated by their 'lens'.",
+      "position": [75, 50],
+      "duration": 30.0
+    },
+    {
+      "text": "It's always good to check what lenses each window has.",
+      "position": [75, 90],
+      "duration": 30.0
+    }
+  ],
+  "goal": [620, 40],
+  "lenses": {"null": 2, "gravity_flip": 0},
+  "ORIGINAL_MAX_WINDOWS": 2
+}
