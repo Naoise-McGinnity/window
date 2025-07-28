@@ -10,6 +10,7 @@ NUM_WINDOWS = 2
 ORIGINAL_MAX_WINDOWS = 5
 MAX_WINDOWS = ORIGINAL_MAX_WINDOWS
 game_state = "playing"
+font = pygame.font.Font(None, 28)
 
 player_size = np.array([40, 40])
 player_pos = np.array([200.0, 300.0])
@@ -36,7 +37,7 @@ obstacles = [
 import json
 
 def load_level(level):
-    with open(f"levels\level-{level}.json", "r") as f:
+    with open(fr"levels\level-{level}.json", "r") as f:
         data = json.load(f)
     global player_pos, obstacles, game_windows, goal_rect, ORIGINAL_MAX_WINDOWS, MAX_WINDOWS, lenses, player_vel
     player_vel = np.array((0.0, 0.0))
@@ -380,7 +381,10 @@ while running:
                     closed_id = game_windows[selected_window_index].id
                     game_windows[selected_window_index].window.destroy()
                     game_windows = [w for w in game_windows if w.id != closed_id]
-                    selected_window_index %= len(game_windows)
+                    try:
+                        selected_window_index %= len(game_windows)
+                    except ZeroDivisionError:
+                        running = False
                 elif event.key == pygame.K_TAB:
                     selected_window_index = (selected_window_index + 1) % len(game_windows)
                 elif event.key == pygame.K_LEFT:
@@ -426,7 +430,6 @@ while running:
         gw.draw(player_pos, player_size, obstacles, is_selected=is_selected)
         for hint in hints:
             if game_state == "playing":
-                font = pygame.font.Font(None, 28)
                 gw.renderer.draw_color = (0, 0, 0, 0)
                 hint.draw(gw.renderer, font, camera_offset=gw.get_camera_offset())
         gw.renderer.present()
