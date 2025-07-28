@@ -146,7 +146,7 @@ def handle_no_collision(player_inside):
     if player_inside:
         collision = False
 
-@lens_handler("anti zoom (player)")
+@lens_handler("wide angle (player)")
 def handle_antizoom_player(player_inside, gw):
     global player_pos, player_size
     if player_inside and not gw.player_inside_last_frame:
