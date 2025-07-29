@@ -22,13 +22,13 @@
   ],
   "hints": [
     {
-      "text": "Most windows you can change their lens.",
-      "position": [200, 50],
+      "text": "If a window has a yellow border when selected in the manager",
+      "position": [50, 50],
       "duration": 30.0
     },
     {
-      "text": "Try cycling through available lenses using [</>] in the window manager.",
-      "position": [200, 90],
+      "text": "you can change its lens. Try cycling through available lenses using [</>] in the window manager.",
+      "position": [50, 90],
       "duration": 30.0
     }
   ],
