@@ -12,7 +12,7 @@ MAX_WINDOWS = ORIGINAL_MAX_WINDOWS
 game_state = "playing"
 font = pygame.font.Font(None, 28)
 
-player_size = np.array([40, 40])
+player_size = np.array([27, 37])
 player_pos = np.array([200.0, 300.0])
 player_vel = np.array([0.0, 0.0])
 gravity = 0.7
@@ -26,6 +26,19 @@ inverted = False
 
 coyote_time_max = 0.15
 coyote_timer = 0.0
+
+player_animations = {
+    "idleleft": [pygame.image.load(fr'assets\player\idle\playeridle{i}.png') for i in range(5)],
+    "idleright": [pygame.image.load(fr'assets\player\idleright\playeridle{i}.png') for i in range(5)],
+    "left": [pygame.image.load(fr"assets\player\left\left{i}.png") for i in range(4)],
+    "right": [pygame.image.load(fr"assets\player\right\right{i}.png") for i in range(4)],
+    "jumpleft": [pygame.image.load(fr"assets\player\jumpleft\jumpleft{i}.png") for i in range(4)],
+    "jumpright": [pygame.image.load(fr"assets\player\jumpright\jumpright{i}.png") for i in range(4)],
+    "jumpidleleft": [pygame.image.load(fr'assets\player\jumpidleleft\jumpidleleft{i}.png') for i in range(4)],
+    "jumpidleright": [pygame.image.load(fr'assets\player\jumpidleright\jumpidleright{i}.png') for i in range(4)],
+}
+player_state = "idleleft"
+frame = 0
 
 obstacles = [
     pygame.Rect(500, 380, 80, 20),
@@ -189,10 +202,17 @@ class GameWindow:
 
         self.renderer.draw_color = (30, 30, 30, 255)
         self.renderer.clear()
-
-        player_draw = pygame.Rect(*(player_pos - cam_offset), *player_size)
+        
+        global frame, player_state
+        frame %= len(player_animations[player_state])
+        player_draw = pygame.Rect((player_pos[0] - cam_offset[0]), ((player_pos[1] - cam_offset[1]) - 2), player_size[0], player_size[1]+2)
+        player_texture = Texture.from_surface(self.renderer, player_animations[player_state][int(np.floor(frame))])
+        frame = (frame + 1/20) % len(player_animations[player_state])
+        if "jump" in player_state and int(np.floor(frame)) == 3:
+            frame = 3
+            player_state = player_state.removeprefix("jump")
         self.renderer.draw_color = (255, 200, 100, 255)
-        self.renderer.fill_rect(player_draw)
+        self.renderer.blit(player_texture, player_draw)
 
         self.renderer.draw_color = (100, 255, 100, 255)
         for block in obstacles:
@@ -234,12 +254,12 @@ class Hint:
 
 class ManagerWindow:
     def __init__(self):
-        self.window = Window("Window Manager", size=(480, 400), resizable=False)
+        self.window = Window("Window Manager", size=(630, 420), resizable=False)
         self.renderer = Renderer(self.window)
         self.font = pygame.font.SysFont("arial", 24)
         self.visible = False
         self.window.hide()
-
+        self.background_image = Texture.from_surface(self.renderer, pygame.image.load(r"assets\Camera.png"))
     def show(self):
         self.visible = True
         self.window.show()
@@ -253,7 +273,7 @@ class ManagerWindow:
             return
         self.renderer.draw_color = (20, 20, 20, 255)
         self.renderer.clear()
-
+        self.renderer.blit(self.background_image, pygame.Rect(0, 0, 630, 420))
         lines = [
             f"Managing Window ID {selected_window.id}",
             f"[L] Lock: {'Yes' if selected_window.locked else 'No'}",
@@ -352,7 +372,21 @@ while running:
             if coyote_timer < 0:
                 coyote_timer = 0
 
+        if "jump" not in player_state:
+            if player_vel[0] > 0:
+                player_state = "right"
+            elif player_vel[0] < 0:
+                player_state = "left"
+            elif player_vel.all() == 0:
+                player_state = "idleleft" if "left" in player_state else "idleright"
+        elif "jump" in player_state:
+            if player_vel[0] > 0:
+                player_state = "jumpright"
+            elif player_vel[0] < 0:
+                player_state = "jumpleft"
+
         if keys[pygame.K_SPACE] and coyote_timer > 0:
+            player_state = "jump" + player_state
             player_vel[1] = jump_strength
             on_ground = False
             coyote_timer = 0
