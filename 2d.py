@@ -17,7 +17,7 @@ player_pos = np.array([200.0, 300.0])
 player_vel = np.array([0.0, 0.0])
 gravity = 0.7
 jump_strength = -14
-level = 1
+level = 5
 on_ground = False
 selected_window_index = 0
 lenses = {}
@@ -41,7 +41,9 @@ def player_animations_template(folder:str):
 
 player_animations = {
     None: player_animations_template("player"),
-    "zoom": player_animations_template("zoom")
+    "zoom": player_animations_template("zoom"),
+    "gravity_flip": player_animations_template("gravity_flip"),
+    "wide angle": player_animations_template("wide angle")
 }
 player_state = "idleleft"
 player_lens = None
@@ -145,6 +147,7 @@ def handle_gravity_flip(player_inside):
         gravity = -abs(gravity)
         jump_strength = abs(jump_strength)
         gravity_flip = True
+        return "gravity_flip"
     else: return player_lens
 
 @lens_handler("zoom (player)")
@@ -176,7 +179,7 @@ def handle_antizoom_player(player_inside, gw):
     global player_pos, player_size
     if player_inside and not gw.player_inside_last_frame:
         player_pos[1] -= 10
-        return
+        return "wide angle"
 
     if player_inside:
         new_size = np.array([gw.window.size[0] / 30, gw.window.size[1] / 30])
@@ -184,6 +187,7 @@ def handle_antizoom_player(player_inside, gw):
         player_size = new_size
         player_pos = center - player_size / 2
         gw._zoom_applied = True
+        return "wide angle"
     else: return player_lens
 
 @lens_handler("inverted controls")
@@ -358,7 +362,7 @@ while running:
             view_rect = pygame.Rect(gw.get_camera_offset(), gw.window.size)
             player_inside = player_rect.colliderect(view_rect)
             if gw.lens in lens_handlers:
-                if "zoom (player)" == gw.lens or "wide angle (player)" == gw.lens:
+                if gw.lens in ["wide angle (player)", "zoom (player)"]:
                     gw._zoom_applied = False
                     player_lens = lens_handlers[gw.lens](player_inside, gw)
                     if gw._zoom_applied:

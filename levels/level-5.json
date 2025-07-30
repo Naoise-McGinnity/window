@@ -1,0 +1,27 @@
+{
+  "level_name": "Level 5",
+  "player_start": [300, 400],
+  "platforms": [
+    [-10000, 450, 30000, 40],
+    [500, -10000, 10, 10430]
+  ],
+  "windows": [
+    {
+      "position": [0, 0],
+      "size": [1280, 480],
+      "locked": true,
+      "lens": null,
+      "settings_locked": true
+    }
+  ],
+  "hints": [
+    {
+      "text": "Wide angle lenses make their focus (in brackets) smaller depending on the size of the window.",
+      "position": [150, 100],
+      "duration": 30.0
+    }
+  ],
+  "goal": [720, 300],
+  "lenses": {"wide angle (player)": 1},
+  "ORIGINAL_MAX_WINDOWS": 3
+}
