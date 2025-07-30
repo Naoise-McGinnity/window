@@ -27,17 +27,24 @@ inverted = False
 coyote_time_max = 0.15
 coyote_timer = 0.0
 
+def player_animations_template(folder:str):
+    return {
+        "idleleft": [pygame.image.load(fr'assets\{folder}\idle\playeridle{i}.png') for i in range(5)],
+        "idleright": [pygame.image.load(fr'assets\{folder}\idleright\playeridle{i}.png') for i in range(5)],
+        "left": [pygame.image.load(fr"assets\{folder}\left\left{i}.png") for i in range(4)],
+        "right": [pygame.image.load(fr"assets\{folder}\right\right{i}.png") for i in range(4)],
+        "jumpleft": [pygame.image.load(fr"assets\{folder}\jumpleft\jumpleft{i}.png") for i in range(4)],
+        "jumpright": [pygame.image.load(fr"assets\{folder}\jumpright\jumpright{i}.png") for i in range(4)],
+        "jumpidleleft": [pygame.image.load(fr'assets\{folder}\jumpidleleft\jumpidleleft{i}.png') for i in range(4)],
+        "jumpidleright": [pygame.image.load(fr'assets\{folder}\jumpidleright\jumpidleright{i}.png') for i in range(4)],
+    }
+
 player_animations = {
-    "idleleft": [pygame.image.load(fr'assets\player\idle\playeridle{i}.png') for i in range(5)],
-    "idleright": [pygame.image.load(fr'assets\player\idleright\playeridle{i}.png') for i in range(5)],
-    "left": [pygame.image.load(fr"assets\player\left\left{i}.png") for i in range(4)],
-    "right": [pygame.image.load(fr"assets\player\right\right{i}.png") for i in range(4)],
-    "jumpleft": [pygame.image.load(fr"assets\player\jumpleft\jumpleft{i}.png") for i in range(4)],
-    "jumpright": [pygame.image.load(fr"assets\player\jumpright\jumpright{i}.png") for i in range(4)],
-    "jumpidleleft": [pygame.image.load(fr'assets\player\jumpidleleft\jumpidleleft{i}.png') for i in range(4)],
-    "jumpidleright": [pygame.image.load(fr'assets\player\jumpidleright\jumpidleright{i}.png') for i in range(4)],
+    None: player_animations_template("player"),
+    "zoom": player_animations_template("zoom")
 }
 player_state = "idleleft"
+player_lens = None
 frame = 0
 
 obstacles = [
@@ -138,13 +145,14 @@ def handle_gravity_flip(player_inside):
         gravity = -abs(gravity)
         jump_strength = abs(jump_strength)
         gravity_flip = True
+    else: return player_lens
 
 @lens_handler("zoom (player)")
 def handle_zoom_player(player_inside, gw):
     global player_pos, player_size
     if player_inside and not gw.player_inside_last_frame:
         player_pos[1] -= 10
-        return
+        return "zoom"
 
     if player_inside:
         new_size = np.array([gw.window.size[0] / 10, gw.window.size[1] / 10])
@@ -152,12 +160,16 @@ def handle_zoom_player(player_inside, gw):
         player_size = new_size
         player_pos = center - player_size / 2
         gw._zoom_applied = True
+        return "zoom"
+    
+    else: return player_lens
 
 @lens_handler("collision disabled")
 def handle_no_collision(player_inside):
     global collision
     if player_inside:
         collision = False
+    else: return player_lens
 
 @lens_handler("wide angle (player)")
 def handle_antizoom_player(player_inside, gw):
@@ -172,12 +184,14 @@ def handle_antizoom_player(player_inside, gw):
         player_size = new_size
         player_pos = center - player_size / 2
         gw._zoom_applied = True
+    else: return player_lens
 
 @lens_handler("inverted controls")
 def handle_inverted_control(player_inside):
     global inverted
     if player_inside:
         inverted = True
+    else: return player_lens
         
         
 
@@ -204,10 +218,10 @@ class GameWindow:
         self.renderer.clear()
         
         global frame, player_state
-        frame %= len(player_animations[player_state])
+        frame %= len(player_animations[player_lens][player_state])
         player_draw = pygame.Rect((player_pos[0] - cam_offset[0]), ((player_pos[1] - cam_offset[1]) - 2), player_size[0], player_size[1]+2)
-        player_texture = Texture.from_surface(self.renderer, player_animations[player_state][int(np.floor(frame))])
-        frame = (frame + 1/20) % len(player_animations[player_state])
+        player_texture = Texture.from_surface(self.renderer, player_animations[player_lens][player_state][int(np.floor(frame))])
+        frame = (frame + 1/20) % len(player_animations[player_lens][player_state])
         if "jump" in player_state and int(np.floor(frame)) == 3:
             frame = 3
             player_state = player_state.removeprefix("jump")
@@ -254,12 +268,13 @@ class Hint:
 
 class ManagerWindow:
     def __init__(self):
-        self.window = Window("Window Manager", size=(630, 420), resizable=False)
+        self.scaler = 1.5
+        self.window = Window("Window Manager", size=np.array((480, 368))*self.scaler, resizable=False)
         self.renderer = Renderer(self.window)
-        self.font = pygame.font.SysFont("arial", 24)
+        self.font = pygame.font.SysFont("helvetica", 11)
         self.visible = False
         self.window.hide()
-        self.background_image = Texture.from_surface(self.renderer, pygame.image.load(r"assets\Camera.png"))
+        self.background_image = Texture.from_surface(self.renderer, pygame.image.load(r"assets\newcamera.png"))
     def show(self):
         self.visible = True
         self.window.show()
@@ -268,12 +283,15 @@ class ManagerWindow:
         self.visible = False
         self.window.hide()
 
-    def draw(self, selected_window):
+    def draw(self, selected_window: 'GameWindow'):
         if not self.visible:
             return
+        viewport = selected_window.renderer.to_surface()
+        viewport = Texture.from_surface(self.renderer, viewport)
         self.renderer.draw_color = (20, 20, 20, 255)
         self.renderer.clear()
-        self.renderer.blit(self.background_image, pygame.Rect(0, 0, 630, 420))
+        self.renderer.blit(viewport, pygame.Rect(173*self.scaler, 83*self.scaler, 50*self.scaler, 41*self.scaler))
+        self.renderer.blit(self.background_image, pygame.Rect(0,0, *self.window.size))
         lines = [
             f"Managing Window ID {selected_window.id}",
             f"[L] Lock: {'Yes' if selected_window.locked else 'No'}",
@@ -285,9 +303,10 @@ class ManagerWindow:
         ]
 
         for i, line in enumerate(lines):
-            text_surf = self.font.render(line, True, (255, 255, 255))
+            text_surf = self.font.render(line, False, (255, 255, 255))
+            text_surf = pygame.transform.scale(text_surf, np.array(text_surf.get_size())*self.scaler)
             text_texture = Texture.from_surface(self.renderer, text_surf)
-            self.renderer.blit(text_texture, pygame.Rect(20, 30 + i * 40, *text_surf.get_size()))
+            self.renderer.blit(text_texture, pygame.Rect(*np.array((43, 199 + i * 18.5))*self.scaler, *(np.array(text_surf.get_size()))))
 
         self.renderer.present()
 
@@ -333,19 +352,19 @@ while running:
         gravity_flip = False
 
         player_rect = pygame.Rect(*player_pos, *player_size)
+        player_lens = None
 
         for gw in game_windows:
             view_rect = pygame.Rect(gw.get_camera_offset(), gw.window.size)
             player_inside = player_rect.colliderect(view_rect)
-
             if gw.lens in lens_handlers:
-                if "zoom (player)" in gw.lens:
+                if "zoom (player)" == gw.lens or "wide angle (player)" == gw.lens:
                     gw._zoom_applied = False
-                    lens_handlers[gw.lens](player_inside, gw)
+                    player_lens = lens_handlers[gw.lens](player_inside, gw)
                     if gw._zoom_applied:
                         zoom_reset_needed = False
                 else:
-                    lens_handlers[gw.lens](player_inside)
+                    player_lens = lens_handlers[gw.lens](player_inside)
 
             gw.player_inside_last_frame = player_inside
 
