@@ -17,7 +17,7 @@ player_pos = np.array([200.0, 300.0])
 player_vel = np.array([0.0, 0.0])
 gravity = 0.7
 jump_strength = -14
-level = 8
+level = 1
 on_ground = False
 selected_window_index = 0
 lenses = {}
@@ -26,6 +26,18 @@ inverted = False
 
 coyote_time_max = 0.15
 coyote_timer = 0.0
+import os
+import easygui
+import json
+if os.path.exists("allowed.txt"):
+    with open("allowed.txt") as f:
+        allowed = bool(f.read())
+else:allowed = easygui.boolbox("Do you want to use your desktop wallpaper as the in-game background?", choices=["Yes", "No"])
+with open("allowed.txt", "w") as f:
+    f.write(str(allowed))
+if allowed: backgroundImage = pygame.image.load(os.path.expandvars(r"%AppData%\Microsoft\Windows\Themes\TranscodedWallpaper"))
+else: backgroundImage = pygame.image.load(r"assets\img0_1920x1200.jpg")
+backgroundImage = pygame.transform.scale(backgroundImage, np.array(backgroundImage.get_rect().size)/20)
 
 def player_animations_template(folder:str):
     return {
@@ -225,6 +237,7 @@ class GameWindow:
 
         self.renderer.draw_color = (30, 30, 30, 255)
         self.renderer.clear()
+        self.renderer.blit(Texture.from_surface(self.renderer, backgroundImage), pygame.Rect(-self.window.position[0],-self.window.position[1],pygame.display.Info().current_w,pygame.display.Info().current_h))
         
         global frame, player_state
         frame %= len(player_animations[player_lens][player_state])
