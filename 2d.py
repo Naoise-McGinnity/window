@@ -17,7 +17,7 @@ player_pos = np.array([200.0, 300.0])
 player_vel = np.array([0.0, 0.0])
 gravity = 0.7
 jump_strength = -14
-level = 5
+level = 8
 on_ground = False
 selected_window_index = 0
 lenses = {}
@@ -62,6 +62,9 @@ def load_level(level):
     with open(fr"levels\level-{level}.json", "r") as f:
         data = json.load(f)
     global player_pos, obstacles, game_windows, goal_rect, ORIGINAL_MAX_WINDOWS, MAX_WINDOWS, lenses, player_vel
+    for gw in game_windows:
+        gw.window.destroy()
+    game_windows = []
     player_vel = np.array((0.0, 0.0))
     player_pos = np.array(data["player_start"], dtype=float)
 
@@ -100,9 +103,9 @@ def collide_platforms(rect, velocity, obstacles):
     rect.x += velocity[0]
     for block in obstacles:
         if rect.colliderect(block):
-            if velocity[0] > 0:
+            if velocity[0] > 0 and rect.left < block.left:
                 rect.right = block.left
-            elif velocity[0] < 0:
+            elif velocity[0] < 0 and rect.right > block.right:
                 rect.left = block.right
             velocity[0] = 0
 
@@ -159,9 +162,9 @@ def handle_zoom_player(player_inside, gw):
 
     if player_inside:
         new_size = np.array([gw.window.size[0] / 10, gw.window.size[1] / 10])
-        center = player_pos + player_size / 2
+        bottomcenter = np.array((player_pos[0] + player_size[0] / 2, player_pos[1] - player_size[1]))
         player_size = new_size
-        player_pos = center - player_size / 2
+        player_pos = np.array((bottomcenter[0] - player_size[0] / 2, bottomcenter[1] + player_size[1]))
         gw._zoom_applied = True
         return "zoom"
     
@@ -175,17 +178,18 @@ def handle_no_collision(player_inside):
     else: return player_lens
 
 @lens_handler("wide angle (player)")
-def handle_antizoom_player(player_inside, gw):
+def handle_antizoom_player(player_inside, gw: 'GameWindow'):
     global player_pos, player_size
     if player_inside and not gw.player_inside_last_frame:
-        player_pos[1] -= 10
+        if (gw.window.size[0] > player_size[0]*30 and gw.window.size[1]>player_size[1]*30): player_pos[1] -= 5
         return "wide angle"
 
     if player_inside:
-        new_size = np.array([gw.window.size[0] / 30, gw.window.size[1] / 30])
-        center = player_pos + player_size / 2
+        MIN_SIZE = 15
+        new_size = np.maximum(np.array([gw.window.size[0] / 30, gw.window.size[1] / 30]), MIN_SIZE)
+        bottomcenter = np.array((player_pos[0] + player_size[0] / 2, player_pos[1] - player_size[1]))
         player_size = new_size
-        player_pos = center - player_size / 2
+        player_pos = np.array((bottomcenter[0] - player_size[0] / 2, bottomcenter[1] + player_size[1]))
         gw._zoom_applied = True
         return "wide angle"
     else: return player_lens
@@ -217,6 +221,7 @@ class GameWindow:
 
     def draw(self, player_pos, player_size, obstacles, is_selected=False):
         cam_offset = self.get_camera_offset()
+        size = ((self.window.size[0]/pygame.display.Info().current_w)*1280, (self.window.size[1]/pygame.display.Info().current_h)*960)
 
         self.renderer.draw_color = (30, 30, 30, 255)
         self.renderer.clear()
@@ -243,6 +248,7 @@ class GameWindow:
         pygame.draw.circle(goal_surf, (200, 200, 255), (goal_draw.size[0]/2, goal_draw.size[1]/2), goal_draw.size[0]/2)
         goal_texture = Texture.from_surface(self.renderer, goal_surf)
         self.renderer.blit(goal_texture, goal_draw)
+        
         global game_state
         if is_selected and game_state == "window_manager":
             self.renderer.draw_color = (255, 255, 0, 255) if not self.settings_locked else (255, 0, 0, 255)
@@ -279,6 +285,9 @@ class ManagerWindow:
         self.visible = False
         self.window.hide()
         self.background_image = Texture.from_surface(self.renderer, pygame.image.load(r"assets\newcamera.png"))
+        self.lens_case = Window("Lens Case", size=np.array((200, 200)), resizable = False)
+        self.lens_font = pygame.font.SysFont("helvetica", 28)
+        self.lens_case_renderer = Renderer(self.lens_case)
     def show(self):
         self.visible = True
         self.window.show()
@@ -288,6 +297,33 @@ class ManagerWindow:
         self.window.hide()
 
     def draw(self, selected_window: 'GameWindow'):
+        self.lens_case_renderer.draw_color = (20, 20, 20, 255)
+        self.lens_case_renderer.clear()
+        lens_text = str(lenses) + " " + str(player_pos)
+        words = lens_text.split(' ')
+        lines = []
+        current_line = ""
+        for word in words:
+            test_line = current_line + (" " if current_line else "") + word
+            test_surf = self.lens_font.render(test_line, False, (255,255,255))
+            if test_surf.get_width() > 200 and current_line:
+                lines.append(current_line)
+                current_line = word
+            else:
+                current_line = test_line
+        if current_line:
+            lines.append(current_line)
+
+        y_offset = 0
+        for line in lines:
+            lens_text_surf = self.lens_font.render(line, False, (255,255,255))
+            lens_text_texture = Texture.from_surface(self.lens_case_renderer, lens_text_surf)
+            self.lens_case_renderer.blit(
+                lens_text_texture,
+                pygame.Rect(0, y_offset, *lens_text_surf.get_size())
+            )
+            y_offset += lens_text_surf.get_height()
+        self.lens_case_renderer.present()
         if not self.visible:
             return
         viewport = selected_window.renderer.to_surface()
@@ -311,7 +347,6 @@ class ManagerWindow:
             text_surf = pygame.transform.scale(text_surf, np.array(text_surf.get_size())*self.scaler)
             text_texture = Texture.from_surface(self.renderer, text_surf)
             self.renderer.blit(text_texture, pygame.Rect(*np.array((43, 199 + i * 18.5))*self.scaler, *(np.array(text_surf.get_size()))))
-
         self.renderer.present()
 
 game_windows = [GameWindow(f"Camera {i+1}", WINDOW_SIZE) for i in range(NUM_WINDOWS)]
@@ -338,6 +373,8 @@ while running:
                 if event.key == pygame.K_e:
                     game_state = "window_manager"
                     window_manager.show()
+                elif event.key == pygame.K_LCTRL:
+                    load_level(level)
 
         keys = pygame.key.get_pressed()
         move_x = (keys[pygame.K_d] - keys[pygame.K_a]) * 5
@@ -360,7 +397,7 @@ while running:
 
         for gw in game_windows:
             view_rect = pygame.Rect(gw.get_camera_offset(), gw.window.size)
-            player_inside = player_rect.colliderect(view_rect)
+            player_inside = view_rect.collidepoint(*player_rect.center)
             if gw.lens in lens_handlers:
                 if gw.lens in ["wide angle (player)", "zoom (player)"]:
                     gw._zoom_applied = False
@@ -374,17 +411,17 @@ while running:
 
         if zoom_reset_needed and not np.allclose(player_size, [40, 40]):
             player_pos[1] -= 30
-            center = player_pos + player_size / 2
+            bottomcenter = np.array((player_pos[0] + player_size[0] / 2, player_pos[1] - player_size[1]))
             player_size = np.array([40.0, 40.0])
-            player_pos = center - player_size / 2
-        player_rect = pygame.Rect(*player_pos, *player_size)
+            player_pos = np.array((bottomcenter[0] - player_size[0] / 2, bottomcenter[1] + player_size[0]))
+        player_rect = pygame.Rect(int(player_pos[0]), int(player_pos[1]), int(player_size[0]), int(player_size[1]))
         locked_windows = []
         for gw in game_windows:
             if gw.locked:
                 view_rect = pygame.Rect(gw.get_camera_offset(), gw.window.size)
-                locked_windows.append(pygame.Rect(*view_rect.bottomleft, view_rect.size[0], 1))
+                locked_windows.append(pygame.Rect(view_rect.bottomleft[0], view_rect.bottomleft[1] - 5, view_rect.size[0], 10))
         if collision: player_rect, player_vel, on_ground = collide_platforms(player_rect, player_vel, [*obstacles, *locked_windows])
-        else: player_rect, player_vel, on_ground = collide_platforms(player_rect, player_vel, [])
+        else: player_rect, player_vel, on_ground = collide_platforms(player_rect, player_vel, locked_windows)
         player_pos = np.array([player_rect.x, player_rect.y])                   
 
 
@@ -395,7 +432,7 @@ while running:
             if coyote_timer < 0:
                 coyote_timer = 0
 
-        if "jump" not in player_state:
+        if ("jump" not in player_state) or on_ground:
             if player_vel[0] > 0:
                 player_state = "right"
             elif player_vel[0] < 0:
@@ -420,7 +457,6 @@ while running:
             try: load_level(level)
             except: running = False
     elif game_state == "window_manager":
-        window_manager.draw(game_windows[selected_window_index])
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
@@ -431,9 +467,10 @@ while running:
                 elif event.key == pygame.K_l:
                     selected = game_windows[selected_window_index]
                     if not selected.settings_locked:
-                        selected.locked = not selected.locked
-                        selected.locked_position = selected.window.position if selected.locked else None
-                        selected.window.resizable = not selected.locked
+                        if not selected.locked:
+                            selected.locked = not selected.locked
+                            selected.locked_position = selected.window.position if selected.locked else None
+                            selected.window.resizable = not selected.locked
                 elif event.key == pygame.K_c:
                     closed_id = game_windows[selected_window_index].id
                     game_windows[selected_window_index].window.destroy()
@@ -475,6 +512,8 @@ while running:
                 elif event.key == pygame.K_n and MAX_WINDOWS > 0:
                     MAX_WINDOWS -= 1
                     game_windows.append(GameWindow()) 
+                elif event.key == pygame.K_LCTRL:
+                    load_level(level)
     if game_state == "playing":
         new_hints = []
         for hint in hints:  
@@ -482,6 +521,8 @@ while running:
             if hint.active:
                 new_hints.append(hint)
         hints = new_hints
+    selected_window_index %= len(game_windows)
+    window_manager.draw(game_windows[selected_window_index])
     for i, gw in enumerate(game_windows):
         is_selected = (i == selected_window_index)
         gw.draw(player_pos, player_size, obstacles, is_selected=is_selected)

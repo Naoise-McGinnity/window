@@ -1,0 +1,20 @@
+{
+  "level_name": "Level 6",
+  "player_start": [300, 400],
+  "platforms": [
+    [-10000, 450, 30000, 40],
+    [500, -10000, 10, 30000]
+  ],
+  "windows": [
+    {
+      "position": [0, 0],
+      "size": [1280, 480],
+      "locked": true,
+      "lens": null,
+      "settings_locked": true
+    }
+  ],
+  "goal": [720, 630],
+  "lenses": {"collision disabled": 1},
+  "ORIGINAL_MAX_WINDOWS": 3
+}
