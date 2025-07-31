@@ -1,6 +1,7 @@
 import pygame
 import numpy as np
 from pygame._sdl2 import Window, Renderer, Texture
+from colour import get_windows_api_accent_color
 
 pygame.init()
 pygame.font.init()
@@ -23,12 +24,13 @@ selected_window_index = 0
 lenses = {}
 hints = []
 inverted = False
+platform_colour = get_windows_api_accent_color()
+print(platform_colour)
 
 coyote_time_max = 0.15
 coyote_timer = 0.0
 import os
 import easygui
-import json
 if os.path.exists("allowed.txt"):
     with open("allowed.txt") as f:
         allowed = bool(f.read())
@@ -226,6 +228,7 @@ class GameWindow:
         self.lens = None
         self.player_inside_last_frame = False
         self.settings_locked = False
+        self.renderer.draw_blend_mode = 1
 
     def get_camera_offset(self):
         current_pos = np.array(self.window.position)
@@ -250,7 +253,7 @@ class GameWindow:
         self.renderer.draw_color = (255, 200, 100, 255)
         self.renderer.blit(player_texture, player_draw)
 
-        self.renderer.draw_color = (100, 255, 100, 255)
+        self.renderer.draw_color = platform_colour
         for block in obstacles:
             draw_block = block.move(-cam_offset)
             self.renderer.fill_rect(draw_block)
@@ -544,4 +547,3 @@ while running:
                 gw.renderer.draw_color = (0, 0, 0, 0)
                 hint.draw(gw.renderer, font, camera_offset=gw.get_camera_offset())
         gw.renderer.present()
-
