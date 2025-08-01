@@ -3,4 +3,5 @@ __pycache__/
 allowed.txt
 dist/
 build/
-2d.spec
+2d.spec/
+game.command

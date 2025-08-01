@@ -1,7 +1,8 @@
 import pygame
 import numpy as np
 from pygame._sdl2 import Window, Renderer, Texture
-from colour import get_windows_api_accent_color
+from colour import *
+import platform
 
 pygame.init()
 pygame.font.init()
@@ -18,26 +19,40 @@ player_pos = np.array([200.0, 300.0])
 player_vel = np.array([0.0, 0.0])
 gravity = 0.7
 jump_strength = -14
-level = 1
+level = 6
 on_ground = False
 selected_window_index = 0
 lenses = {}
 hints = []
 inverted = False
-platform_colour = get_windows_api_accent_color()
-print(platform_colour)
-
+platform_colour = get_windows_api_accent_color() if platform.system() == 'Windows' else get_macos_api_accent_color() if platform.system() == 'Darwin' else (0, 111, 196, 227)
+goal_colour = np.array((255,255,255)) - np.array(platform_colour[:3])
+goal_colour = (*goal_colour, platform_colour[3])
 coyote_time_max = 0.15
 coyote_timer = 0.0
 import os
 import easygui
+import subprocess
+def get_macos_wallpaper():
+    script = 'tell application "Finder" to get POSIX path of (get desktop picture as alias)'
+    try:
+        path = subprocess.check_output(['osascript', '-e', script]).decode().strip()
+        if os.path.exists(path):
+            return path
+    except Exception as e:
+        print(f"Could not get wallpaper: {e}")
+    return None
 if os.path.exists("allowed.txt"):
     with open("allowed.txt") as f:
         allowed = bool(f.read())
 else:allowed = easygui.boolbox("Do you want to use your desktop wallpaper as the in-game background?", choices=["Yes", "No"])
 with open("allowed.txt", "w") as f:
     f.write(str(allowed))
-if allowed: backgroundImage = pygame.image.load(os.path.expandvars(r"%AppData%\Microsoft\Windows\Themes\TranscodedWallpaper"))
+if allowed:
+    if platform.system().lower() == 'windows':backgroundImage = pygame.image.load(os.path.expandvars(r"%AppData%\Microsoft\Windows\Themes\TranscodedWallpaper"))
+    elif platform.system().lower() == 'darwin':
+        backgroundImage = pygame.image.load(get_macos_wallpaper() if get_macos_wallpaper() else r"assets\img0_1920x1200.jpg")
+    else: backgroundImage = pygame.image.load(r'assets\image0_1920x1200.jpg')
 else: backgroundImage = pygame.image.load(r"assets\img0_1920x1200.jpg")
 backgroundImage = pygame.transform.scale(backgroundImage, np.array(backgroundImage.get_rect().size)/20)
 
@@ -261,7 +276,7 @@ class GameWindow:
         self.renderer.draw_color = (200, 200, 255, 255)
         goal_draw = goal_rect.move(-cam_offset)
         goal_surf = pygame.Surface(goal_draw.size, pygame.SRCALPHA)
-        pygame.draw.circle(goal_surf, (200, 200, 255), (goal_draw.size[0]/2, goal_draw.size[1]/2), goal_draw.size[0]/2)
+        pygame.draw.circle(goal_surf, goal_colour, (goal_draw.size[0]/2, goal_draw.size[1]/2), goal_draw.size[0]/2)
         goal_texture = Texture.from_surface(self.renderer, goal_surf)
         self.renderer.blit(goal_texture, goal_draw)
         
@@ -537,7 +552,8 @@ while running:
             if hint.active:
                 new_hints.append(hint)
         hints = new_hints
-    selected_window_index %= len(game_windows)
+    try:selected_window_index %= len(game_windows)
+    except ZeroDivisionError: running = False
     window_manager.draw(game_windows[selected_window_index])
     for i, gw in enumerate(game_windows):
         is_selected = (i == selected_window_index)

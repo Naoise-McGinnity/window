@@ -18,3 +18,11 @@ def get_windows_api_accent_color():
     b = argb & 0xFF
 
     return (r, g, b, a)
+
+def get_macos_api_accent_color():
+    from AppKit import NSColor
+
+    accent = NSColor.controlAccentColor()
+    r, g, b, a = accent.redComponent(), accent.greenComponent(), accent.blueComponent(), accent.alphaComponent()
+    color_tuple = (int(r*255), int(g*255), int(b*255), int(a*255))
+    print(color_tuple)
