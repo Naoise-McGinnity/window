@@ -72,7 +72,8 @@ player_animations = {
     None: player_animations_template("player"),
     "zoom": player_animations_template("zoom"),
     "gravity_flip": player_animations_template("gravity_flip"),
-    "wide angle": player_animations_template("wide angle")
+    "wide angle": player_animations_template("wide angle"),
+    "collision disabled": player_animations_template("collision disabled")
 }
 player_state = "idleleft"
 player_lens = None
@@ -132,9 +133,9 @@ def collide_platforms(rect, velocity, obstacles):
     rect.x += velocity[0]
     for block in obstacles:
         if rect.colliderect(block):
-            if velocity[0] > 0 and rect.left < block.left:
+            if velocity[0] >= 0 and rect.left < block.left:
                 rect.right = block.left
-            elif velocity[0] < 0 and rect.right > block.right:
+            elif velocity[0] <= 0 and rect.right > block.right:
                 rect.left = block.right
             velocity[0] = 0
 
@@ -142,11 +143,11 @@ def collide_platforms(rect, velocity, obstacles):
     for block in obstacles:
         if not gravity_flip:
             if rect.colliderect(block):
-                if velocity[1] > 0:
+                if velocity[1] >= 0:
                     rect.bottom = block.top
                     velocity[1] = 0
                     on_ground = True
-                elif velocity[1] < 0:
+                elif velocity[1] <= 0:
                     rect.top = block.bottom
                     velocity[1] = 0
         else:
@@ -191,9 +192,9 @@ def handle_zoom_player(player_inside, gw):
 
     if player_inside:
         new_size = np.array([gw.window.size[0] / 10, gw.window.size[1] / 10])
-        bottomcenter = np.array((player_pos[0] + player_size[0] / 2, player_pos[1] - player_size[1]))
+        center = player_pos + player_size / 2
         player_size = new_size
-        player_pos = np.array((bottomcenter[0] - player_size[0] / 2, bottomcenter[1] + player_size[1]))
+        player_pos = center - player_size / 2
         gw._zoom_applied = True
         return "zoom"
     
@@ -204,6 +205,7 @@ def handle_no_collision(player_inside):
     global collision
     if player_inside:
         collision = False
+        return "collision disabled"
     else: return player_lens
 
 @lens_handler("wide angle (player)")
@@ -216,9 +218,9 @@ def handle_antizoom_player(player_inside, gw: 'GameWindow'):
     if player_inside:
         MIN_SIZE = 15
         new_size = np.maximum(np.array([gw.window.size[0] / 30, gw.window.size[1] / 30]), MIN_SIZE)
-        bottomcenter = np.array((player_pos[0] + player_size[0] / 2, player_pos[1] - player_size[1]))
+        center = player_pos + player_size / 2
         player_size = new_size
-        player_pos = np.array((bottomcenter[0] - player_size[0] / 2, bottomcenter[1] + player_size[1]))
+        player_pos = center - player_size / 2
         gw._zoom_applied = True
         return "wide angle"
     else: return player_lens
@@ -244,7 +246,8 @@ class GameWindow:
         self.player_inside_last_frame = False
         self.settings_locked = False
         self.renderer.draw_blend_mode = 1
-
+        self.block_surf = pygame.Surface((pygame.display.Info().current_w, pygame.display.Info().current_h), pygame.SRCALPHA)
+        self.surfaces = [pygame.Surface([min(draw_block.size[0],16384), min(draw_block.size[1], 16384)]) for draw_block in obstacles]
     def get_camera_offset(self):
         current_pos = np.array(self.window.position)
         return current_pos
@@ -268,11 +271,21 @@ class GameWindow:
         self.renderer.draw_color = (255, 200, 100, 255)
         self.renderer.blit(player_texture, player_draw)
 
-        self.renderer.draw_color = platform_colour
-        for block in obstacles:
+        # self.renderer.draw_color = platform_colour
+        # for block in obstacles:
+        #     draw_block = block.move(-cam_offset)
+        #     self.renderer.fill_rect(draw_block)
+        self.block_surf.fill((0,0,0,0))
+        for i, block in enumerate(obstacles):
             draw_block = block.move(-cam_offset)
-            self.renderer.fill_rect(draw_block)
-            
+            surf = self.surfaces[i]
+            surf.fill(platform_colour)
+            tex = surf
+            self.block_surf.blit(tex, draw_block)
+        block_tex = Texture.from_surface(self.renderer, self.block_surf)
+        block_tex.alpha = platform_colour[3]
+        block_tex.blend_mode = 1
+        self.renderer.blit(block_tex, self.block_surf.get_rect())
         self.renderer.draw_color = (200, 200, 255, 255)
         goal_draw = goal_rect.move(-cam_offset)
         goal_surf = pygame.Surface(goal_draw.size, pygame.SRCALPHA)
@@ -440,11 +453,11 @@ while running:
 
             gw.player_inside_last_frame = player_inside
 
-        if zoom_reset_needed and not np.allclose(player_size, [40, 40]):
+        if zoom_reset_needed and not np.allclose(player_size, np.array((27.0, 37.0))):
             player_pos[1] -= 30
-            bottomcenter = np.array((player_pos[0] + player_size[0] / 2, player_pos[1] - player_size[1]))
-            player_size = np.array([40.0, 40.0])
-            player_pos = np.array((bottomcenter[0] - player_size[0] / 2, bottomcenter[1] + player_size[0]))
+            center = player_pos + player_size / 2
+            player_size = np.array((27.0, 37.0))
+            player_pos = center - player_size / 2
         player_rect = pygame.Rect(int(player_pos[0]), int(player_pos[1]), int(player_size[0]), int(player_size[1]))
         locked_windows = []
         for gw in game_windows:
@@ -552,9 +565,11 @@ while running:
             if hint.active:
                 new_hints.append(hint)
         hints = new_hints
-    try:selected_window_index %= len(game_windows)
+    try:
+        selected_window_index %= len(game_windows)
+        window_manager.draw(game_windows[selected_window_index])
     except ZeroDivisionError: running = False
-    window_manager.draw(game_windows[selected_window_index])
+
     for i, gw in enumerate(game_windows):
         is_selected = (i == selected_window_index)
         gw.draw(player_pos, player_size, obstacles, is_selected=is_selected)

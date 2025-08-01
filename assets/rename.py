@@ -1,6 +1,6 @@
 import os
 
-folder = r"C:\Users\pmcgi\OneDrive\Documents\GitHub\window\assets\wide angle"
+folder = r"C:\Users\Walpha\Desktop\Naoise_Codecrafters\Weird\window\assets\collision disabled"
 folders = [f for f in os.listdir(folder)]
 names = ["playeridle", "playeridle", "jumpidleleft", "jumpidleright", "jumpleft", "jumpright", "left", "right"]
 for i, sub in enumerate(folders):
